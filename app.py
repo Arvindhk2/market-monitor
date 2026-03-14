@@ -306,9 +306,23 @@ def fetch_prices(tickers):
     results = []
     for symbol in tickers:
         try:
-            info = yf.Ticker(symbol).fast_info
-            current = info.last_price
-            prev = info.previous_close
+            ticker = yf.Ticker(symbol)
+
+            # Try fast_info first, fall back to history
+            try:
+                info = ticker.fast_info
+                current = info.last_price
+                prev = info.previous_close
+            except Exception:
+                hist = ticker.history(period="2d")
+                if hist.empty:
+                    raise ValueError("No price data available")
+                current = float(hist["Close"].iloc[-1])
+                prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current
+
+            if not current or not prev:
+                raise ValueError("Price data returned None")
+
             pct = ((current - prev) / prev) * 100
             results.append({
                 "symbol": symbol,
