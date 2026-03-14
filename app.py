@@ -1,6 +1,7 @@
 import os
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import streamlit as st
 from datetime import datetime
 import anthropic
@@ -192,6 +193,47 @@ header[data-testid="stHeader"] { background:transparent; height:0; }
 [data-baseweb="select"] span { color:#1a1f2e !important;font-family:'Geist',sans-serif !important;font-size:13px !important; }
 
 hr { border-color:#e8eaee !important; }
+
+/* ── Projection tab ── */
+.proj-hero { background:#1c3d8c;border-radius:14px;padding:28px 32px;margin-bottom:4px;
+             display:flex;align-items:center;justify-content:space-between; }
+.proj-hero-label { font-family:'Geist Mono',monospace;font-size:10px;color:rgba(255,255,255,0.5);
+                   letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px; }
+.proj-hero-val { font-family:'Geist Mono',monospace;font-size:42px;font-weight:300;
+                 color:#ffffff;letter-spacing:-1.5px;line-height:1; }
+.proj-hero-sub { font-family:'Geist Mono',monospace;font-size:12px;color:rgba(255,255,255,0.55);margin-top:6px; }
+.proj-hero-right { text-align:right; }
+.proj-hero-gain { font-family:'Geist Mono',monospace;font-size:22px;font-weight:400;
+                  color:#6ee7b7;letter-spacing:-0.5px; }
+.proj-hero-cagr  { font-family:'Geist Mono',monospace;font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px; }
+
+.proj-scenario-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px; }
+.proj-scenario { border-radius:10px;padding:16px 18px;border:1px solid; }
+.proj-scenario-bear { background:#fff1f3;border-color:#fca5b3; }
+.proj-scenario-base { background:#f0f4ff;border-color:#c0cfe8; }
+.proj-scenario-bull { background:#f0fdf7;border-color:#a7f0cc; }
+.proj-scenario-lbl  { font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;
+                      letter-spacing:0.16em;text-transform:uppercase;margin-bottom:8px; }
+.proj-scenario-val  { font-family:'Geist Mono',monospace;font-size:24px;font-weight:400;letter-spacing:-0.5px;line-height:1; }
+.proj-scenario-sub  { font-family:'Geist Mono',monospace;font-size:10px;margin-top:5px;opacity:0.7; }
+.proj-scenario-bear .proj-scenario-lbl { color:#b91c3a; }
+.proj-scenario-bear .proj-scenario-val { color:#b91c3a; }
+.proj-scenario-base .proj-scenario-lbl { color:#1c3d8c; }
+.proj-scenario-base .proj-scenario-val { color:#1c3d8c; }
+.proj-scenario-bull .proj-scenario-lbl { color:#0a7c4e; }
+.proj-scenario-bull .proj-scenario-val { color:#0a7c4e; }
+
+.proj-input-card { background:#ffffff;border:1px solid #e8eaee;border-radius:12px;
+                   padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:12px; }
+.proj-input-title { font-family:'Geist Mono',monospace;font-size:9px;color:#b0b8c8;
+                    letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px; }
+
+.proj-insight { background:#f8f9fb;border:1px solid #eef0f4;border-radius:10px;
+                padding:14px 18px;margin-top:4px; }
+.proj-insight-lbl { font-family:'Geist Mono',monospace;font-size:9px;color:#b0b8c8;
+                    letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px; }
+.proj-insight-txt { font-size:12px;color:#4a5568;line-height:1.7; }
+
 .mp-footer { text-align:center;margin-top:3rem;padding:18px;font-family:'Geist Mono',monospace;
              font-size:9px;color:#c8d0dc;letter-spacing:0.16em;border-top:1px solid #e8eaee;text-transform:uppercase; }
 </style>
@@ -316,6 +358,96 @@ def fetch_ticker_info(sym):
         }
     except:
         return {}
+
+
+@st.cache_data(ttl=3600)
+def fetch_historical_cagr(sym: str, years: int = 10) -> dict:
+    """
+    Fetch up to `years` of daily closes, compute:
+      - actual historical CAGR
+      - annualised volatility
+      - monthly returns series for Monte Carlo
+    """
+    try:
+        hist = yf.Ticker(sym).history(period=f"{years}y", interval="1mo", auto_adjust=True)
+        if hist.empty or len(hist) < 12:
+            hist = yf.Ticker(sym).history(period="5y", interval="1mo", auto_adjust=True)
+        closes = hist["Close"].dropna()
+        if len(closes) < 12:
+            return {}
+        monthly_ret = closes.pct_change().dropna()
+        ann_ret     = (1 + monthly_ret.mean()) ** 12 - 1
+        ann_vol     = monthly_ret.std() * np.sqrt(12)
+        # Historical CAGR over full period
+        n_years = len(closes) / 12
+        hist_cagr = (closes.iloc[-1] / closes.iloc[0]) ** (1 / n_years) - 1
+        return {
+            "hist_cagr":   round(hist_cagr * 100, 2),
+            "ann_vol":     round(ann_vol * 100, 2),
+            "monthly_ret": monthly_ret.tolist(),
+            "n_years":     round(n_years, 1),
+            "current_price": round(float(closes.iloc[-1]), 2),
+        }
+    except:
+        return {}
+
+
+def run_monte_carlo(
+    invested: float,
+    current_price: float,
+    monthly_ret_series: list,
+    years: int = 10,
+    n_sim: int = 500,
+    monthly_add: float = 0.0,
+) -> dict:
+    """
+    Run Monte Carlo with bootstrapped monthly returns.
+    Returns percentile paths and final value statistics.
+    """
+    months        = years * 12
+    ret_arr       = np.array(monthly_ret_series)
+    final_vals    = []
+    # Store p10, p50, p90 paths for charting (sample 3 representative)
+    paths_store   = {"bear": None, "base": None, "bull": None}
+    all_paths     = []
+
+    rng = np.random.default_rng(42)
+    for _ in range(n_sim):
+        sampled = rng.choice(ret_arr, size=months, replace=True)
+        units   = invested / current_price
+        value   = invested
+        path    = [value]
+        for r in sampled:
+            value = value * (1 + r) + monthly_add
+            if value < 0:
+                value = 0
+            path.append(round(value, 2))
+        final_vals.append(value)
+        all_paths.append(path)
+
+    final_arr = np.array(final_vals)
+    p10 = float(np.percentile(final_arr, 10))
+    p25 = float(np.percentile(final_arr, 25))
+    p50 = float(np.percentile(final_arr, 50))
+    p75 = float(np.percentile(final_arr, 75))
+    p90 = float(np.percentile(final_arr, 90))
+
+    # Pick representative paths closest to each percentile
+    def closest_path(target):
+        idx = int(np.argmin(np.abs(final_arr - target)))
+        return all_paths[idx]
+
+    paths_store["bear"] = closest_path(p10)
+    paths_store["base"] = closest_path(p50)
+    paths_store["bull"] = closest_path(p90)
+
+    return {
+        "p10": round(p10, 2), "p25": round(p25, 2),
+        "p50": round(p50, 2), "p75": round(p75, 2),
+        "p90": round(p90, 2),
+        "paths": paths_store,
+        "final_arr": final_arr.tolist(),
+    }
 
 
 # ── Claude AI ─────────────────────────────────────────────────────
@@ -499,7 +631,7 @@ with st.sidebar:
 # ════════════════════════════════════════════════════════════════
 # MAIN TABS
 # ════════════════════════════════════════════════════════════════
-tab1, tab2, tab3 = st.tabs(["  Dashboard  ", "  AI Research  ", "  Alerts  "])
+tab1, tab2, tab3, tab4 = st.tabs(["  Dashboard  ", "  AI Research  ", "  Alerts  ", "  Projection  "])
 
 
 # ── TAB 1: DASHBOARD ─────────────────────────────────────────────
@@ -810,6 +942,336 @@ with tab3:
             f'<span style="color:{tc};font-weight:500;margin-left:6px;">'
             f'{triggered} of {len(valid)} positions would trigger</span></div>',
             unsafe_allow_html=True)
+
+
+# ── TAB 4: INVESTMENT PROJECTION ────────────────────────────────
+with tab4:
+    import plotly.graph_objects as go
+
+    sec_hdr("Investment Projection — Future Value Calculator")
+
+    # ── Inputs ──────────────────────────────────────────────────
+    st.markdown('<div class="proj-input-card"><div class="proj-input-title">Configure Your Investment</div>', unsafe_allow_html=True)
+
+    inp_c1, inp_c2, inp_c3, inp_c4 = st.columns(4)
+    with inp_c1:
+        # Allow custom ticker or pick from watchlist
+        all_proj_tickers = WATCHLIST + ["GOOGL", "META", "AMZN", "TSLA", "SPY", "QQQ", "VTI", "BRK-B"]
+        proj_sym = st.selectbox("Stock / ETF / Mutual Fund", sorted(set(all_proj_tickers)),
+                                index=0, key="proj_sym", label_visibility="visible")
+    with inp_c2:
+        invested_amt = st.number_input("Invested Amount ($)", min_value=100.0, max_value=10_000_000.0,
+                                       value=10_000.0, step=500.0, format="%.0f", key="proj_invest")
+    with inp_c3:
+        monthly_add = st.number_input("Monthly SIP / Top-up ($)", min_value=0.0, max_value=100_000.0,
+                                      value=0.0, step=100.0, format="%.0f", key="proj_sip")
+    with inp_c4:
+        proj_years = st.slider("Projection Horizon (years)", min_value=1, max_value=30,
+                               value=10, step=1, key="proj_years", label_visibility="visible")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Custom growth rate override
+    adv_c1, adv_c2 = st.columns([3, 2])
+    with adv_c1:
+        use_custom = st.checkbox("Override with custom annual return rate", value=False, key="proj_custom_chk")
+    with adv_c2:
+        custom_rate = st.number_input("Custom annual return (%)", min_value=-50.0, max_value=100.0,
+                                      value=12.0, step=0.5, format="%.1f", key="proj_custom_rate",
+                                      disabled=not use_custom, label_visibility="visible")
+
+    # ── Fetch data ───────────────────────────────────────────────
+    with st.spinner(f"Fetching {proj_sym} historical data…"):
+        hist_data = fetch_historical_cagr(proj_sym, years=10)
+
+    # Current live price
+    live_price_row = next((r for r in price_data if r["symbol"] == proj_sym), None)
+    if live_price_row and not live_price_row.get("error"):
+        live_price = live_price_row["price"]
+    elif hist_data.get("current_price"):
+        live_price = hist_data["current_price"]
+    else:
+        try:
+            live_price = round(float(yf.Ticker(proj_sym).fast_info.last_price), 2)
+        except:
+            live_price = 100.0
+
+    if hist_data and hist_data.get("monthly_ret"):
+        hist_cagr  = hist_data["hist_cagr"]
+        ann_vol    = hist_data["ann_vol"]
+        monthly_ret_series = hist_data["monthly_ret"]
+        data_years = hist_data["n_years"]
+
+        if use_custom:
+            # Build synthetic monthly returns from custom rate
+            monthly_mean = (1 + custom_rate / 100) ** (1/12) - 1
+            monthly_std  = ann_vol / 100 / np.sqrt(12)
+            rng2         = np.random.default_rng(99)
+            monthly_ret_series = (rng2.normal(monthly_mean, monthly_std, 500)).tolist()
+            display_cagr = custom_rate
+        else:
+            display_cagr = hist_cagr
+
+        # Monte Carlo
+        mc = run_monte_carlo(
+            invested      = invested_amt,
+            current_price = live_price,
+            monthly_ret_series = monthly_ret_series,
+            years         = proj_years,
+            n_sim         = 1000,
+            monthly_add   = monthly_add,
+        )
+
+        # Simple compound for bear/base/bull using scenario rates
+        def simple_future(pv, rate_pct, yrs, monthly=0):
+            r = rate_pct / 100
+            mr = (1 + r) ** (1/12) - 1
+            val = pv
+            for _ in range(yrs * 12):
+                val = val * (1 + mr) + monthly
+            return round(val, 2)
+
+        bear_rate = display_cagr - ann_vol * 0.5
+        bull_rate = display_cagr + ann_vol * 0.5
+        base_rate = display_cagr
+
+        total_invested = invested_amt + monthly_add * proj_years * 12
+
+        # ── Hero card ────────────────────────────────────────────
+        base_val  = mc["p50"]
+        base_gain = round(base_val - total_invested, 2)
+        base_mult = round(base_val / invested_amt, 2)
+        gain_sign = "+" if base_gain >= 0 else ""
+        gain_col  = "#6ee7b7" if base_gain >= 0 else "#fca5b3"
+
+        st.markdown(
+            f'<div class="proj-hero">'
+            f'<div>'
+            f'<div class="proj-hero-label">{proj_sym} · Median projection · {proj_years}yr horizon</div>'
+            f'<div class="proj-hero-val">${base_val:,.0f}</div>'
+            f'<div class="proj-hero-sub">Starting from ${invested_amt:,.0f}'
+            + (f' + ${monthly_add:,.0f}/mo SIP' if monthly_add > 0 else '') +
+            f' · Live price ${live_price}</div>'
+            f'</div>'
+            f'<div class="proj-hero-right">'
+            f'<div class="proj-hero-gain" style="color:{gain_col};">{gain_sign}${base_gain:,.0f}</div>'
+            f'<div class="proj-hero-cagr">{base_mult}x return · {display_cagr:.1f}% hist CAGR</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True)
+
+        # ── Scenario cards ───────────────────────────────────────
+        bear_val = mc["p10"]
+        bull_val = mc["p90"]
+
+        def fmt_scenario(val, rate):
+            gain = val - total_invested
+            sign = "+" if gain >= 0 else ""
+            mult = round(val / invested_amt, 1)
+            return val, gain, sign, mult, rate
+
+        bv, bg, bs, bm, br = fmt_scenario(bear_val, bear_rate)
+        sv, sg, ss, sm, sr = fmt_scenario(base_val, base_rate)
+        uv, ug, us, um, ur = fmt_scenario(bull_val, bull_rate)
+
+        st.markdown(
+            f'<div class="proj-scenario-grid">'
+            f'<div class="proj-scenario proj-scenario-bear">'
+            f'<div class="proj-scenario-lbl">Bear Case (P10)</div>'
+            f'<div class="proj-scenario-val">${bv:,.0f}</div>'
+            f'<div class="proj-scenario-sub">{bs}${bg:,.0f} · {bm}x · ~{br:.1f}%/yr</div>'
+            f'</div>'
+            f'<div class="proj-scenario proj-scenario-base">'
+            f'<div class="proj-scenario-lbl">Base Case (P50)</div>'
+            f'<div class="proj-scenario-val">${sv:,.0f}</div>'
+            f'<div class="proj-scenario-sub">{ss}${sg:,.0f} · {sm}x · ~{sr:.1f}%/yr</div>'
+            f'</div>'
+            f'<div class="proj-scenario proj-scenario-bull">'
+            f'<div class="proj-scenario-lbl">Bull Case (P90)</div>'
+            f'<div class="proj-scenario-val">${uv:,.0f}</div>'
+            f'<div class="proj-scenario-sub">{us}${ug:,.0f} · {um}x · ~{ur:.1f}%/yr</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True)
+
+        # ── Fan chart ────────────────────────────────────────────
+        sec_hdr("Monte Carlo Fan Chart — 1,000 Simulations")
+
+        months_axis = list(range(proj_years * 12 + 1))
+        years_axis  = [m / 12 for m in months_axis]
+
+        bear_path = mc["paths"]["bear"]
+        base_path = mc["paths"]["base"]
+        bull_path = mc["paths"]["bull"]
+
+        fig_proj = go.Figure()
+
+        # Shaded band P25-P75
+        fig_proj.add_trace(go.Scatter(
+            x=years_axis + years_axis[::-1],
+            y=[simple_future(invested_amt, display_cagr + ann_vol * 0.25, 0) if i == 0
+               else None for i in range(len(years_axis))] +
+              [simple_future(invested_amt, display_cagr - ann_vol * 0.25, 0) if i == 0
+               else None for i in range(len(years_axis))],
+            fill="toself", fillcolor="rgba(28,61,140,0.06)",
+            line=dict(color="rgba(0,0,0,0)"),
+            showlegend=False, hoverinfo="skip",
+        ))
+
+        # Bear path
+        fig_proj.add_trace(go.Scatter(
+            x=years_axis, y=bear_path,
+            mode="lines", name="Bear (P10)",
+            line=dict(color="#b91c3a", width=1.5, dash="dot"),
+            hovertemplate="Bear: $%{y:,.0f}<extra></extra>",
+        ))
+
+        # Bull path
+        fig_proj.add_trace(go.Scatter(
+            x=years_axis, y=bull_path,
+            mode="lines", name="Bull (P90)",
+            line=dict(color="#0a7c4e", width=1.5, dash="dot"),
+            hovertemplate="Bull: $%{y:,.0f}<extra></extra>",
+        ))
+
+        # Base path
+        fig_proj.add_trace(go.Scatter(
+            x=years_axis, y=base_path,
+            mode="lines", name="Base (P50)",
+            line=dict(color="#1c3d8c", width=2.5),
+            hovertemplate="Base: $%{y:,.0f}<extra></extra>",
+        ))
+
+        # Invested line
+        invested_line = [invested_amt + monthly_add * m for m in months_axis]
+        fig_proj.add_trace(go.Scatter(
+            x=years_axis, y=invested_line,
+            mode="lines", name="Invested Capital",
+            line=dict(color="#9ba3b2", width=1.2, dash="dash"),
+            hovertemplate="Invested: $%{y:,.0f}<extra></extra>",
+        ))
+
+        fig_proj.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#ffffff",
+            font=dict(family="Geist Mono, monospace", color="#9ba3b2", size=10),
+            xaxis=dict(title="Years", gridcolor="#f0f1f4", zeroline=False,
+                       tickfont=dict(size=10, color="#9ba3b2"), showline=False,
+                       tickvals=list(range(0, proj_years + 1, max(1, proj_years // 10)))),
+            yaxis=dict(title="Portfolio Value ($)", gridcolor="#f0f1f4", zeroline=False,
+                       tickprefix="$", tickformat=",.0f",
+                       tickfont=dict(size=10, color="#9ba3b2"), showline=False, side="left"),
+            margin=dict(l=70, r=20, t=16, b=40),
+            height=340,
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                        font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
+            hoverlabel=dict(bgcolor="#0f1624", bordercolor="#1c3d8c",
+                            font=dict(family="Geist Mono", size=11, color="#ffffff")),
+        )
+
+        st.plotly_chart(fig_proj, use_container_width=True, config={"displayModeBar": False})
+
+        # ── Distribution histogram ────────────────────────────────
+        sec_hdr("Final Value Distribution — After " + str(proj_years) + " Years")
+
+        final_arr = np.array(mc["final_arr"])
+        fig_hist  = go.Figure()
+        fig_hist.add_trace(go.Histogram(
+            x=final_arr,
+            nbinsx=60,
+            marker_color="#1c3d8c",
+            opacity=0.75,
+            hovertemplate="$%{x:,.0f}: %{y} simulations<extra></extra>",
+            name="Simulations",
+        ))
+        # Vertical lines for percentiles
+        for val, label, col in [
+            (mc["p10"], "P10", "#b91c3a"),
+            (mc["p50"], "P50", "#1c3d8c"),
+            (mc["p90"], "P90", "#0a7c4e"),
+        ]:
+            fig_hist.add_vline(x=val, line_dash="dot", line_color=col, line_width=1.5,
+                               annotation_text=f"{label} ${val:,.0f}",
+                               annotation_font=dict(size=9, color=col),
+                               annotation_position="top")
+        fig_hist.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#ffffff",
+            font=dict(family="Geist Mono, monospace", color="#9ba3b2", size=10),
+            xaxis=dict(title="Final Portfolio Value ($)", gridcolor="#f0f1f4", zeroline=False,
+                       tickprefix="$", tickformat=",.0f", tickfont=dict(size=10, color="#9ba3b2")),
+            yaxis=dict(title="# Simulations", gridcolor="#f0f1f4", zeroline=False,
+                       tickfont=dict(size=10, color="#9ba3b2")),
+            margin=dict(l=60, r=20, t=30, b=40), height=240,
+            showlegend=False,
+            bargap=0.05,
+        )
+        st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
+
+        # ── Year-by-year table ───────────────────────────────────
+        sec_hdr("Year-by-Year Projection Table")
+
+        table_rows = []
+        for yr in range(1, proj_years + 1):
+            mo = yr * 12
+            mc_yr = run_monte_carlo(
+                invested=invested_amt,
+                current_price=live_price,
+                monthly_ret_series=monthly_ret_series,
+                years=yr, n_sim=500,
+                monthly_add=monthly_add,
+            )
+            cap_in = invested_amt + monthly_add * mo
+            table_rows.append({
+                "Year": yr,
+                "Invested ($)": f"${cap_in:,.0f}",
+                "Bear P10 ($)": f"${mc_yr['p10']:,.0f}",
+                "Base P50 ($)": f"${mc_yr['p50']:,.0f}",
+                "Bull P90 ($)": f"${mc_yr['p90']:,.0f}",
+                "Base Return": f"{((mc_yr['p50']/cap_in-1)*100):+.1f}%",
+            })
+
+        df_table = pd.DataFrame(table_rows)
+        st.dataframe(
+            df_table.set_index("Year"),
+            use_container_width=True,
+            height=min(38 * proj_years + 38, 420),
+        )
+
+        # ── Key insights ─────────────────────────────────────────
+        breakeven_yr = None
+        for yr in range(1, proj_years + 1):
+            cap = invested_amt + monthly_add * yr * 12
+            mc_chk = run_monte_carlo(invested_amt, live_price, monthly_ret_series,
+                                     years=yr, n_sim=200, monthly_add=monthly_add)
+            if mc_chk["p50"] >= cap:
+                breakeven_yr = yr
+                break
+
+        profit_prob = round(sum(1 for v in mc["final_arr"] if v > total_invested) / len(mc["final_arr"]) * 100, 1)
+        double_prob = round(sum(1 for v in mc["final_arr"] if v > invested_amt * 2) / len(mc["final_arr"]) * 100, 1)
+
+        st.markdown(
+            f'<div class="proj-insight">'
+            f'<div class="proj-insight-lbl">Key Insights</div>'
+            f'<div class="proj-insight-txt">'
+            f'Based on <b>{data_years:.0f} years</b> of {proj_sym} historical data '
+            f'(CAGR {hist_cagr:.1f}%, annualised volatility {ann_vol:.1f}%) and 1,000 Monte Carlo simulations:<br><br>'
+            f'<b>Probability of profit</b> after {proj_years} years: '
+            f'<span style="color:#0a7c4e;font-weight:500;">{profit_prob}%</span><br>'
+            f'<b>Probability of doubling</b> your initial investment: '
+            f'<span style="color:#1c3d8c;font-weight:500;">{double_prob}%</span><br>'
+            + (f'<b>Break-even year</b> (median scenario): '
+               f'<span style="color:#0a7c4e;font-weight:500;">Year {breakeven_yr}</span><br>'
+               if breakeven_yr else '') +
+            f'<b>Disclaimer:</b> Projections are based on historical returns and Monte Carlo simulation. '
+            f'Past performance does not guarantee future results. This is not financial advice.'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True)
+
+    else:
+        st.warning(f"Could not fetch sufficient historical data for **{proj_sym}**. "
+                   f"Try a different ticker or check your connection.")
 
 
 st.markdown(
