@@ -11,7 +11,7 @@ ALERT_THRESHOLD = 2.0
 # ── Page config ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="MarketPlus",
-    page_icon="📈",
+    page_icon="▪",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -19,458 +19,324 @@ st.set_page_config(
 # ── Custom CSS ───────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
+html, body, [class*="css"] { font-family: 'Syne', sans-serif; }
 
 .stApp {
-    background: #080c14;
-    color: #cdd5e0;
+    background: #06080f;
+    color: #b8c4d4;
 }
 
-header[data-testid="stHeader"] {
-    background: transparent;
-}
+header[data-testid="stHeader"] { background: transparent; height: 0; }
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
-    background: #0c1220;
-    border-right: 1px solid #1c2840;
+    background: #080b14;
+    border-right: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
 }
-
-[data-testid="stSidebar"] > div {
-    padding-top: 0 !important;
-}
+[data-testid="stSidebar"] > div { padding-top: 0 !important; }
 
 .sb-brand {
-    padding: 22px 20px 16px;
-    border-bottom: 1px solid #1c2840;
-    margin-bottom: 0;
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
 }
-
-.sb-logo-row {
+.sb-wordmark {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.5px;
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 4px;
 }
-
-.sb-logo-mark {
-    width: 30px;
-    height: 30px;
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
+.sb-dot {
+    width: 8px; height: 8px;
+    background: #4f8ef7;
+    border-radius: 50%;
+    display: inline-block;
     flex-shrink: 0;
 }
-
-.sb-app-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 17px;
-    font-weight: 600;
-    color: #f0f4ff;
-    letter-spacing: -0.3px;
-}
-
 .sb-tagline {
-    font-size: 11px;
-    color: #3d5580;
-    letter-spacing: 0.02em;
-    font-weight: 400;
-}
-
-.sb-section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
-    font-weight: 500;
-    color: #2d4060;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #1e2d45;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 16px 20px 8px;
+    margin-left: 18px;
 }
-
-.sb-updated {
-    padding: 0 20px 14px;
+.sb-time {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-    color: #3d5580;
-    font-family: 'IBM Plex Mono', monospace;
+    color: #1e2d45;
+    padding: 16px 24px 14px;
+}
+.sb-time span { color: #2a3a54; display: block; margin-top: 2px; }
+
+.sb-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #161e2e;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 16px 24px 8px;
 }
 
-.sb-updated span {
-    color: #5a7aaa;
-}
-
-.wl-row {
+.wl-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 7px 20px;
-    border-bottom: 1px solid #111c2e;
-    transition: background 0.15s;
+    padding: 9px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
 }
-
-.wl-symbol {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: #8aa0c0;
-    letter-spacing: 0.04em;
-    font-weight: 500;
-}
-
-.wl-change {
-    font-family: 'IBM Plex Mono', monospace;
+.wl-sym {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     font-weight: 500;
+    color: #2a3a54;
+    letter-spacing: 0.08em;
 }
+.wl-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 
-.sb-status-block {
-    padding: 14px 20px;
-    margin: 8px 12px;
-    border-radius: 8px;
-    background: #0e1928;
-    border: 1px solid #1c2840;
+.sb-status {
+    margin: 16px 14px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.015);
 }
-
-.sb-status-label {
-    font-family: 'IBM Plex Mono', monospace;
+.sb-status-lbl {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
-    color: #2d4060;
-    letter-spacing: 0.12em;
+    color: #161e2e;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 /* ── Buttons ── */
 .stButton > button {
-    background: #0e1928;
-    color: #7096c8;
-    border: 1px solid #1c3050;
-    border-radius: 7px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    padding: 7px 16px;
-    transition: all 0.18s;
+    background: transparent;
+    color: #2a3a54;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    transition: all 0.15s;
     width: 100%;
 }
-
 .stButton > button:hover {
-    background: #162238;
-    color: #a0c0e8;
-    border-color: #2a4a70;
+    background: rgba(79,142,247,0.06);
+    color: #4f6e98;
+    border-color: rgba(79,142,247,0.12);
 }
 
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
     gap: 0;
-    border-bottom: 1px solid #1c2840;
+    padding: 0 8px;
 }
-
 .stTabs [data-baseweb="tab"] {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: #3d5580;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: #1e2d45;
     background: transparent;
     border: none;
-    padding: 10px 20px;
+    padding: 14px 24px;
     text-transform: uppercase;
 }
-
 .stTabs [aria-selected="true"] {
-    color: #60a0f0 !important;
-    border-bottom: 2px solid #3b82f6 !important;
+    color: #d8e8ff !important;
+    border-bottom: 1px solid #4f8ef7 !important;
     background: transparent !important;
 }
 
 /* ── Section headers ── */
-.section-header {
-    font-family: 'IBM Plex Mono', monospace;
+.sec-hdr {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 2rem 0 1.2rem;
+}
+.sec-line { flex: 1; height: 1px; background: rgba(255,255,255,0.03); }
+.sec-txt {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
-    color: #2d4060;
-    letter-spacing: 0.14em;
+    color: #161e2e;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    padding-bottom: 10px;
-    margin: 1.5rem 0 1rem 0;
-    border-bottom: 1px solid #1c2840;
+    white-space: nowrap;
 }
 
 /* ── Ticker cards ── */
-.ticker-card {
-    background: #0c1422;
-    border: 1px solid #1a2840;
-    border-radius: 10px;
-    padding: 16px 14px;
+.t-card {
+    background: #080c16;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 20px 14px 16px;
     text-align: center;
     position: relative;
-    transition: border-color 0.2s;
+    overflow: hidden;
+    transition: background 0.2s, border-color 0.2s;
 }
-
-.ticker-card:hover {
-    border-color: #2a4060;
+.t-card:hover { background: #0a0f1c; border-color: rgba(255,255,255,0.07); }
+.t-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.t-sym {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #1e2d45;
+    letter-spacing: 0.22em;
+    margin-bottom: 10px;
 }
-
-.ticker-card-accent {
-    position: absolute;
-    top: 0; left: 16px; right: 16px;
-    height: 1px;
-    border-radius: 0 0 2px 2px;
-}
-
-.ticker-symbol {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: #3d5a80;
-    letter-spacing: 0.12em;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.ticker-price {
-    font-family: 'IBM Plex Mono', monospace;
+.t-price {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 22px;
-    font-weight: 500;
-    color: #c8d8f0;
-    margin-bottom: 6px;
+    font-weight: 300;
+    color: #c0d0e8;
+    margin-bottom: 8px;
     letter-spacing: -0.5px;
 }
-
-.ticker-change-up {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: #34d399;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    background: #0a2018;
-    border: 1px solid #0d3020;
-    border-radius: 4px;
-    padding: 2px 8px;
-}
-
-.ticker-change-down {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: #f87171;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    background: #200a0a;
-    border: 1px solid #300d0d;
-    border-radius: 4px;
-    padding: 2px 8px;
-}
-
-.ticker-alert-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
-    color: #fbbf24;
-    letter-spacing: 0.08em;
-    margin-top: 6px;
-    background: #1a1200;
-    border: 1px solid #2a1e00;
-    border-radius: 4px;
-    padding: 2px 6px;
+.t-chg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
     display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
 }
-
-/* ── Alert cards ── */
-.alert-card-up {
-    background: #081a10;
-    border: 1px solid #0d3020;
-    border-left: 3px solid #34d399;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    color: #34d399;
-}
-
-.alert-card-down {
-    background: #1a0808;
-    border: 1px solid #300d0d;
-    border-left: 3px solid #f87171;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    color: #f87171;
-}
-
-/* ── Chat UI ── */
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+.up   { color: #3dcf8e; background: rgba(61,207,142,0.07); }
+.dn   { color: #e05c6a; background: rgba(224,92,106,0.07); }
+.t-alert {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #b87820;
+    letter-spacing: 0.1em;
     margin-top: 8px;
 }
 
-.chat-user-wrap {
+/* ── Alert cards ── */
+.a-card {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border-left: 2px solid;
 }
+.a-up   { background: rgba(61,207,142,0.04);  border-color: #3dcf8e; }
+.a-dn   { background: rgba(224,92,106,0.04); border-color: #e05c6a; }
 
-.chat-bot-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.chat-meta {
-    font-family: 'IBM Plex Mono', monospace;
+/* ── Chat ── */
+.chat-wrap { display: flex; flex-direction: column; gap: 20px; margin-top: 8px; }
+.chat-u { display: flex; justify-content: flex-end; }
+.chat-b { display: flex; justify-content: flex-start; }
+.chat-sender {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
-    letter-spacing: 0.1em;
-    color: #2d4060;
-    margin-bottom: 5px;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
+    color: #161e2e;
+    margin-bottom: 6px;
 }
-
-.chat-user {
-    background: #111e35;
-    border: 1px solid #1c3050;
-    border-radius: 10px 10px 3px 10px;
-    padding: 11px 15px;
-    font-size: 14px;
-    color: #a8c0e0;
-    max-width: 85%;
-    line-height: 1.55;
-}
-
-.chat-bot {
-    background: #0a1820;
-    border: 1px solid #1a3040;
-    border-radius: 10px 10px 10px 3px;
-    padding: 11px 15px;
-    font-size: 14px;
-    color: #90c0d8;
-    max-width: 90%;
+.chat-sender-r { text-align: right; }
+.bubble-u {
+    background: #0d1525;
+    border: 1px solid rgba(79,142,247,0.1);
+    border-radius: 10px 10px 2px 10px;
+    padding: 13px 16px;
+    font-size: 13px;
+    color: #6888a8;
+    max-width: 82%;
     line-height: 1.65;
-    font-family: 'Inter', sans-serif;
 }
-
-.chat-sources {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: #2d5070;
-    margin-top: 6px;
+.bubble-b {
+    background: #070b14;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px 10px 10px 2px;
+    padding: 13px 16px;
+    font-size: 13px;
+    color: #6888a8;
+    max-width: 88%;
+    line-height: 1.75;
 }
-
 .chat-empty {
     text-align: center;
-    padding: 50px 20px;
-    color: #2d4060;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    line-height: 2;
-}
-
-/* ── News items ── */
-.news-item {
-    border-bottom: 1px solid #111c2e;
-    padding: 12px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.news-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    padding: 3px 8px;
-    border-radius: 5px;
-    white-space: nowrap;
-    min-width: 50px;
-    text-align: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-    font-weight: 500;
-}
-
-.news-title {
-    font-size: 13px;
-    color: #8aa0c0;
-    line-height: 1.5;
-}
-
-.news-time {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: #2d4060;
-    margin-top: 3px;
+    padding: 60px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #111824;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 3;
 }
 
 /* ── Form elements ── */
-.stTextInput > div > div > input,
-.stSelectbox > div > div {
-    background: #0c1422 !important;
-    border: 1px solid #1a2840 !important;
-    border-radius: 8px !important;
-    color: #c8d8f0 !important;
-    font-family: 'Inter', sans-serif !important;
+.stTextInput > div > div > input {
+    background: #080c16 !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 6px !important;
+    color: #8aa0c0 !important;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 13px !important;
 }
-
 .stTextInput > div > div > input:focus {
-    border-color: #2a4a70 !important;
-    box-shadow: 0 0 0 2px #1a3050 !important;
+    border-color: rgba(79,142,247,0.18) !important;
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.04) !important;
 }
-
-.stTextInput > label,
-.stSelectbox > label {
-    font-size: 11px !important;
-    color: #3d5580 !important;
-    font-family: 'IBM Plex Mono', monospace !important;
-    letter-spacing: 0.06em !important;
+.stTextInput > label, .stSelectbox > label {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 9px !important;
+    color: #161e2e !important;
+    letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
 }
-
-/* ── Slider ── */
-.stSlider > div {
-    color: #3d5580;
+.stSelectbox > div > div {
+    background: #080c16 !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 6px !important;
 }
-
-/* ── Selectbox dropdown text ── */
 [data-baseweb="select"] span {
-    color: #c8d8f0 !important;
-    font-size: 13px;
+    color: #8aa0c0 !important;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 13px !important;
 }
 
-/* ── Plotly chart bg ── */
-.js-plotly-plot .plotly {
-    background: transparent !important;
-}
+/* ── Misc ── */
+hr { border-color: rgba(255,255,255,0.03) !important; }
 
-/* ── Divider ── */
-hr {
-    border-color: #1c2840 !important;
-}
-
-/* ── Footer ── */
 .mp-footer {
     text-align: center;
-    margin-top: 3rem;
-    padding: 16px;
-    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 4rem;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
-    color: #1c2840;
-    letter-spacing: 0.12em;
-    border-top: 1px solid #111c2e;
+    color: #0e1624;
+    letter-spacing: 0.18em;
+    border-top: 1px solid rgba(255,255,255,0.02);
     text-transform: uppercase;
 }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ── Helpers ──────────────────────────────────────────────────────
+def sec_hdr(label):
+    st.markdown(f"""
+    <div class="sec-hdr">
+        <div class="sec-line"></div>
+        <div class="sec-txt">{label}</div>
+        <div class="sec-line"></div>
+    </div>""", unsafe_allow_html=True)
 
 
 # ── Price fetching ────────────────────────────────────────────────
@@ -491,218 +357,177 @@ def fetch_prices(tickers):
                 "alert": abs(pct) >= ALERT_THRESHOLD,
             })
         except Exception as e:
-            results.append({
-                "symbol": symbol, "price": None,
-                "pct_change": None, "alert": False, "error": str(e)
-            })
+            results.append({"symbol": symbol, "price": None,
+                            "pct_change": None, "alert": False, "error": str(e)})
     return results
 
 
-# ── AI Chat via Claude API ────────────────────────────────────────
+# ── Claude AI ────────────────────────────────────────────────────
 def ask_claude(question: str, price_data: list) -> str:
-    """Send question to Claude with live market context."""
     try:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+        client = anthropic.Anthropic(api_key=api_key)
 
-        # Build market context from live data
         price_lines = []
         for row in price_data:
             if not row.get("error"):
                 arrow = "▲" if row["pct_change"] >= 0 else "▼"
-                price_lines.append(
-                    f"  {row['symbol']}: ${row['price']} ({arrow}{abs(row['pct_change'])}% today)"
-                )
-        market_ctx = "\n".join(price_lines) if price_lines else "  (prices unavailable)"
-
-        system_prompt = f"""You are a concise, knowledgeable market research assistant for a professional trading dashboard called MarketPlus.
-
-Current watchlist prices as of {datetime.now().strftime('%b %d, %Y %H:%M')}:
-{market_ctx}
-
-Guidelines:
-- Be direct and analytical — no fluff or filler
-- Reference the live price data above when relevant
-- For earnings/fundamental questions, draw on your training knowledge about these companies
-- Keep responses under 200 words unless the question clearly warrants more detail
-- Use plain text only — no markdown headers or bullet symbols
-- If you don't have specific earnings data, say so clearly and give useful general context"""
+                price_lines.append(f"  {row['symbol']}: ${row['price']} ({arrow}{abs(row['pct_change'])}%)")
+        ctx = "\n".join(price_lines) or "  (unavailable)"
 
         response = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=512,
-            system=system_prompt,
+            system=f"""You are a sharp, concise market analyst for MarketPlus.
+
+Live prices as of {datetime.now().strftime('%b %d, %Y %H:%M')}:
+{ctx}
+
+Be direct and analytical. Reference prices when relevant. Max 180 words. Plain text only.""",
             messages=[{"role": "user", "content": question}]
         )
         return response.content[0].text
 
     except anthropic.AuthenticationError:
-        return "Authentication error: please set your ANTHROPIC_API_KEY environment variable to enable AI responses."
+        return "API key not configured — add ANTHROPIC_API_KEY to Streamlit secrets."
     except Exception as e:
-        return f"Unable to reach AI service: {e}"
+        err = str(e)
+        if "credit" in err.lower():
+            return "Insufficient API credits. Visit console.anthropic.com/settings/billing."
+        return f"Unable to reach AI service: {err}"
+
+
+# ════════════════════════════════════════════════════════════════
+# DATA
+# ════════════════════════════════════════════════════════════════
+price_data = fetch_prices(WATCHLIST)
+alert_count = sum(1 for r in price_data if r.get("alert"))
 
 
 # ════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ════════════════════════════════════════════════════════════════
-
-price_data = fetch_prices(WATCHLIST)
-alert_count = sum(1 for r in price_data if r.get("alert"))
-
 with st.sidebar:
-    # Brand
     st.markdown("""
     <div class="sb-brand">
-        <div class="sb-logo-row">
-            <div class="sb-logo-mark">📈</div>
-            <div class="sb-app-name">MarketPlus</div>
-        </div>
-        <div class="sb-tagline">AI-Powered Market Research</div>
-    </div>
-    """, unsafe_allow_html=True)
+        <div class="sb-wordmark"><span class="sb-dot"></span>MarketPlus</div>
+        <div class="sb-tagline">AI Research Terminal</div>
+    </div>""", unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="sb-updated">
-        Last updated<br>
-        <span>{datetime.now().strftime('%b %d, %Y  %H:%M')}</span>
-    </div>
+    <div class="sb-time">Last updated<span>{datetime.now().strftime('%b %d, %Y  ·  %H:%M')}</span></div>
     """, unsafe_allow_html=True)
 
-    if st.button("⟳  Refresh Prices"):
+    if st.button("↻  Refresh"):
         st.cache_data.clear()
         st.rerun()
 
-    # Watchlist
-    st.markdown('<div class="sb-section-label">Watchlist</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-lbl">Watchlist</div>', unsafe_allow_html=True)
     for row in price_data:
         if row.get("error"):
             continue
         pct = row["pct_change"]
-        color = "#34d399" if pct >= 0 else "#f87171"
-        arrow = "▲" if pct >= 0 else "▼"
+        color = "#3dcf8e" if pct >= 0 else "#e05c6a"
+        sign = "+" if pct >= 0 else ""
         st.markdown(f"""
-        <div class="wl-row">
-            <span class="wl-symbol">{row['symbol']}</span>
-            <span class="wl-change" style="color:{color};">{arrow} {abs(pct)}%</span>
-        </div>
-        """, unsafe_allow_html=True)
+        <div class="wl-item">
+            <span class="wl-sym">{row['symbol']}</span>
+            <span class="wl-pct" style="color:{color};">{sign}{pct}%</span>
+        </div>""", unsafe_allow_html=True)
 
-    # Status
-    status_color = "#fbbf24" if alert_count else "#34d399"
-    status_text = f"⚠ {alert_count} Alert{'s' if alert_count != 1 else ''}" if alert_count else "● All Clear"
+    status_color = "#b87820" if alert_count else "#3dcf8e"
+    status_icon = "◈" if alert_count else "◉"
+    status_text = f"{alert_count} alert{'s' if alert_count != 1 else ''} triggered" if alert_count else "All positions normal"
     st.markdown(f"""
-    <div class="sb-status-block" style="margin-top: 16px;">
-        <div class="sb-status-label">Status</div>
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:13px;
-                    color:{status_color}; font-weight:500;">{status_text}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    <div class="sb-status">
+        <div class="sb-status-lbl">Market Status</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{status_color};letter-spacing:0.02em;">
+            {status_icon} {status_text}
+        </div>
+    </div>""", unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════════
 # MAIN CONTENT
 # ════════════════════════════════════════════════════════════════
-
-tab1, tab2, tab3 = st.tabs(["  Dashboard  ", "  AI Chat  ", "  Alerts  "])
+tab1, tab2, tab3 = st.tabs(["Dashboard", "AI Research", "Alerts"])
 
 
 # ── TAB 1: DASHBOARD ─────────────────────────────────────────────
 with tab1:
-    st.markdown("<div class='section-header'>Live Prices</div>", unsafe_allow_html=True)
+    sec_hdr("Live Prices")
 
-    cols = st.columns(len(WATCHLIST))
+    cols = st.columns(len(WATCHLIST), gap="small")
     for col, row in zip(cols, price_data):
         with col:
             if row.get("error"):
                 st.markdown(f"""
-                <div class='ticker-card'>
-                    <div class='ticker-symbol'>{row['symbol']}</div>
-                    <div class='ticker-price' style='font-size:14px;color:#f87171;'>ERROR</div>
+                <div class="t-card">
+                    <div class="t-sym">{row['symbol']}</div>
+                    <div class="t-price" style="font-size:14px;color:#e05c6a;">ERR</div>
                 </div>""", unsafe_allow_html=True)
             else:
                 pct = row["pct_change"]
                 is_up = pct >= 0
-                change_class = "ticker-change-up" if is_up else "ticker-change-down"
-                arrow = "▲" if is_up else "▼"
-                accent_color = "#34d399" if is_up else "#f87171"
-                alert_html = "<div class='ticker-alert-badge'>⚠ ALERT</div>" if row["alert"] else ""
+                bar = "#3dcf8e" if is_up else "#e05c6a"
+                cls = "up" if is_up else "dn"
+                sign = "+" if is_up else ""
+                alert_html = '<div class="t-alert">◈ ALERT</div>' if row["alert"] else ""
                 st.markdown(f"""
-                <div class='ticker-card'>
-                    <div class='ticker-card-accent' style='background:{accent_color}22;'></div>
-                    <div class='ticker-symbol'>{row['symbol']}</div>
-                    <div class='ticker-price'>${row['price']}</div>
-                    <div class='{change_class}'>{arrow} {abs(pct)}%</div>
+                <div class="t-card">
+                    <div class="t-bar" style="background:{bar};opacity:0.5;"></div>
+                    <div class="t-sym">{row['symbol']}</div>
+                    <div class="t-price">${row['price']}</div>
+                    <div class="t-chg {cls}">{sign}{pct}%</div>
                     {alert_html}
                 </div>""", unsafe_allow_html=True)
 
-    # Price chart
-    st.markdown("<div class='section-header'>Price Chart</div>", unsafe_allow_html=True)
+    sec_hdr("Price History — 30 Days")
 
-    selected_ticker = st.selectbox(
-        "Select ticker",
-        WATCHLIST,
-        label_visibility="collapsed"
-    )
+    selected_ticker = st.selectbox("Ticker", WATCHLIST, label_visibility="collapsed")
 
     try:
         import plotly.graph_objects as go
         hist = yf.Ticker(selected_ticker).history(period="1mo")
-
         if not hist.empty:
             close = hist["Close"]
             is_up = close.iloc[-1] >= close.iloc[0]
-            line_color = "#34d399" if is_up else "#f87171"
-            fill_color = "rgba(52,211,153,0.06)" if is_up else "rgba(248,113,113,0.06)"
-
+            lc = "#3dcf8e" if is_up else "#e05c6a"
+            fc = "rgba(61,207,142,0.05)" if is_up else "rgba(224,92,106,0.05)"
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=hist.index,
-                y=close,
-                mode="lines",
-                line=dict(color=line_color, width=1.8),
-                fill="tozeroy",
-                fillcolor=fill_color,
-                name=selected_ticker,
-                hovertemplate="$%{y:.2f}<extra></extra>",
+                x=hist.index, y=close, mode="lines",
+                line=dict(color=lc, width=1.5),
+                fill="tozeroy", fillcolor=fc,
+                hovertemplate="<b>$%{y:.2f}</b><extra></extra>",
             ))
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(12,20,34,0.6)",
-                font=dict(family="IBM Plex Mono", color="#3d5580", size=10),
-                xaxis=dict(
-                    gridcolor="#111c2e",
-                    showgrid=True,
-                    zeroline=False,
-                    tickfont=dict(size=10),
-                    showline=False,
-                ),
-                yaxis=dict(
-                    gridcolor="#111c2e",
-                    showgrid=True,
-                    zeroline=False,
-                    tickprefix="$",
-                    tickfont=dict(size=10),
-                    showline=False,
-                    side="right",
-                ),
-                margin=dict(l=0, r=50, t=16, b=0),
-                height=260,
-                showlegend=False,
-                hovermode="x unified",
+                plot_bgcolor="rgba(8,12,22,0.9)",
+                font=dict(family="JetBrains Mono", color="#1e2d45", size=9),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.02)", zeroline=False,
+                           tickfont=dict(size=9, color="#1e2d45"), showline=False),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.02)", zeroline=False,
+                           tickprefix="$", tickfont=dict(size=9, color="#1e2d45"),
+                           showline=False, side="right"),
+                margin=dict(l=0, r=56, t=12, b=0),
+                height=280, showlegend=False, hovermode="x unified",
+                hoverlabel=dict(bgcolor="#0d1525", bordercolor="rgba(79,142,247,0.2)",
+                                font=dict(family="JetBrains Mono", size=11, color="#8aa8d0")),
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     except Exception as e:
         st.caption(f"Chart unavailable: {e}")
 
 
-# ── TAB 2: AI CHAT ───────────────────────────────────────────────
+# ── TAB 2: AI RESEARCH ───────────────────────────────────────────
 with tab2:
-    st.markdown("<div class='section-header'>AI Research Assistant</div>", unsafe_allow_html=True)
+    sec_hdr("AI Research Assistant")
 
     st.markdown("""
-    <div style='font-size: 13px; color: #3d5580; margin-bottom: 20px; line-height: 1.6;'>
-        Ask anything about your watchlist — powered by Claude with live market context.
-    </div>
-    """, unsafe_allow_html=True)
+    <div style="font-size:13px;color:#1e2d45;margin-bottom:24px;line-height:1.7;max-width:600px;font-family:'Syne',sans-serif;">
+        Ask anything about your watchlist. Powered by Claude with live price context injected automatically.
+    </div>""", unsafe_allow_html=True)
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -714,129 +539,121 @@ with tab2:
         "How is AMD positioned in the AI chip market?",
         "What risks could affect MSFT this year?",
         "Compare NVDA and AMD on gross margins",
-        "Why is SPY up or down today?",
+        "Why is SPY moving today?",
     ]
 
-    selected_q = st.selectbox("Quick questions", examples, label_visibility="visible")
-    question = st.text_input(
-        "Your question",
-        value=selected_q,
-        placeholder="Ask about earnings, strategy, risks, performance...",
-    )
+    selected_q = st.selectbox("Quick prompts", examples, label_visibility="visible")
+    question = st.text_input("Your question", value=selected_q,
+                             placeholder="Ask about earnings, valuation, risks, strategy...")
 
-    col_ask, col_clear = st.columns([1, 4])
+    col_ask, col_clear, _ = st.columns([1, 1, 5])
     with col_ask:
         ask_btn = st.button("Ask →", disabled=not question)
     with col_clear:
-        if st.button("Clear Chat"):
+        if st.button("Clear"):
             st.session_state.chat_history = []
             st.rerun()
 
     if ask_btn and question:
-        with st.spinner("Thinking..."):
+        with st.spinner(""):
             answer = ask_claude(question, price_data)
-        st.session_state.chat_history.append({
-            "question": question,
-            "answer": answer,
-        })
+        st.session_state.chat_history.append({"question": question, "answer": answer})
 
     if st.session_state.chat_history:
-        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+        st.markdown("<div class='chat-wrap'>", unsafe_allow_html=True)
         for entry in reversed(st.session_state.chat_history):
             st.markdown(f"""
-            <div class="chat-user-wrap">
-                <div class="chat-meta">You</div>
-                <div class="chat-user">{entry['question']}</div>
-            </div>
-            <div class="chat-bot-wrap">
-                <div class="chat-meta">MarketPlus AI</div>
-                <div class="chat-bot">{entry['answer']}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            <div>
+                <div class="chat-u">
+                    <div>
+                        <div class="chat-sender chat-sender-r">You</div>
+                        <div class="bubble-u">{entry['question']}</div>
+                    </div>
+                </div>
+                <div class="chat-b" style="margin-top:12px;">
+                    <div>
+                        <div class="chat-sender">MarketPlus AI</div>
+                        <div class="bubble-b">{entry['answer']}</div>
+                    </div>
+                </div>
+            </div>""", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.markdown("""
         <div class="chat-empty">
-            No conversation yet<br>
-            <span style="font-size:9px; letter-spacing:0.12em;">
-                Ask a question above to begin
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+            No messages yet<br>
+            <span style="font-size:9px;color:#0e1624;">Select a prompt or type a question</span>
+        </div>""", unsafe_allow_html=True)
 
 
 # ── TAB 3: ALERTS ────────────────────────────────────────────────
 with tab3:
-    st.markdown("<div class='section-header'>Active Alerts</div>", unsafe_allow_html=True)
+    sec_hdr("Active Alerts")
 
     alerts = [r for r in price_data if r.get("alert")]
-
     if not alerts:
-        st.markdown("""
-        <div style='text-align:center; padding:40px; color:#2d4060;
-                    font-family:IBM Plex Mono,monospace; font-size:11px; letter-spacing:0.1em;'>
-            ● No alerts triggered<br>
-            <span style='font-size:10px;'>Threshold: ±2.0%</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="text-align:center;padding:48px 20px;font-family:'JetBrains Mono',monospace;
+                    font-size:9px;color:#111824;letter-spacing:0.18em;text-transform:uppercase;line-height:3;">
+            ◉ No alerts triggered<br>
+            <span style="font-size:9px;color:#0a1018;">Threshold · ±{ALERT_THRESHOLD}%</span>
+        </div>""", unsafe_allow_html=True)
     else:
         for a in alerts:
             pct = a["pct_change"]
-            direction = "UP" if pct > 0 else "DOWN"
-            css_class = "alert-card-up" if pct > 0 else "alert-card-down"
-            arrow = "▲" if pct > 0 else "▼"
+            css = "a-up" if pct > 0 else "a-dn"
+            color = "#3dcf8e" if pct > 0 else "#e05c6a"
+            sign = "+" if pct > 0 else ""
+            direction = "Bullish signal" if pct > 0 else "Bearish signal"
             st.markdown(f"""
-            <div class='{css_class}'>
-                {arrow} {a['symbol']} — {direction} {abs(pct)}%
-                &nbsp;&nbsp;
-                <span style='opacity:0.5; font-size:11px;'>${a['prev_close']} → ${a['price']}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            <div class="a-card {css}">
+                <div>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:14px;
+                                 color:{color};font-weight:500;">{a['symbol']}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+                                 color:{color};opacity:0.4;margin-left:12px;">{direction}</span>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:{color};">{sign}{pct}%</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:{color};opacity:0.4;">${a['prev_close']} → ${a['price']}</div>
+                </div>
+            </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div class='section-header' style='margin-top:2rem;'>Threshold Settings</div>", unsafe_allow_html=True)
-
+    sec_hdr("Threshold")
     new_threshold = st.slider(
-        "Alert on price moves greater than:",
-        min_value=0.5,
-        max_value=10.0,
-        value=ALERT_THRESHOLD,
-        step=0.5,
-        format="%.1f%%",
+        "threshold", min_value=0.5, max_value=10.0,
+        value=float(ALERT_THRESHOLD), step=0.5, format="%.1f%%",
+        label_visibility="collapsed",
     )
     st.markdown(f"""
-    <div style='font-family:IBM Plex Mono,monospace; font-size:11px;
-                color:#3d5580; margin-top:8px;'>
-        Current threshold: ±{new_threshold:.1f}%
-    </div>
-    """, unsafe_allow_html=True)
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;
+                color:#161e2e;margin-top:6px;letter-spacing:0.12em;">
+        Alert threshold · ±{new_threshold:.1f}%
+    </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div class='section-header' style='margin-top:2rem;'>All Positions</div>", unsafe_allow_html=True)
-
+    sec_hdr("All Positions")
     for row in price_data:
         if row.get("error"):
             continue
         pct = row["pct_change"]
-        bar_color = "#34d399" if pct >= 0 else "#f87171"
-        bar_width = min(abs(pct) / 5 * 100, 100)
+        color = "#3dcf8e" if pct >= 0 else "#e05c6a"
+        bar_w = min(abs(pct) / 5 * 100, 100)
         sign = "+" if pct >= 0 else ""
         st.markdown(f"""
-        <div style='margin-bottom:14px;'>
-            <div style='display:flex; justify-content:space-between;
-                        font-family:IBM Plex Mono,monospace; font-size:12px; margin-bottom:5px;'>
-                <span style='color:#5a7aaa;'>{row['symbol']}</span>
-                <span style='color:{bar_color};'>{sign}{pct}%</span>
+        <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;
+                        font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:5px;">
+                <span style="color:#1e2d45;">{row['symbol']}</span>
+                <span style="color:{color};">{sign}{pct}%</span>
             </div>
-            <div style='background:#111c2e; border-radius:3px; height:3px;'>
-                <div style='background:{bar_color}; width:{bar_width}%;
-                            height:3px; border-radius:3px; opacity:0.6;'></div>
+            <div style="background:rgba(255,255,255,0.03);border-radius:2px;height:2px;">
+                <div style="background:{color};width:{bar_w}%;height:2px;border-radius:2px;opacity:0.5;"></div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
 
 # ── Footer ───────────────────────────────────────────────────────
 st.markdown("""
 <div class="mp-footer">
-    MarketPlus · Built with Streamlit · Powered by Claude AI · Data via yfinance
-</div>
-""", unsafe_allow_html=True)
+    MarketPlus &nbsp;·&nbsp; Streamlit &nbsp;·&nbsp; Claude AI &nbsp;·&nbsp; yfinance
+</div>""", unsafe_allow_html=True)
