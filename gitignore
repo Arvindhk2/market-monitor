@@ -1,0 +1,16 @@
+# Secrets — never commit these
+.streamlit/secrets.toml
+
+# FAISS index (too large for GitHub)
+earnings_faiss_index/
+
+# PDFs (too large for GitHub)
+earnings_pdfs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.DS_Store

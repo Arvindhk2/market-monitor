@@ -1,0 +1,12 @@
+yfinance==0.2.36
+streamlit==1.32.0
+langchain==0.1.16
+langchain-community==0.0.38
+faiss-cpu==1.7.4
+sentence-transformers==2.6.1
+pypdf==4.1.0
+transformers==4.39.3
+torch==2.2.2
+requests==2.31.0
+apscheduler==3.10.4
+newsapi-python==0.2.7
