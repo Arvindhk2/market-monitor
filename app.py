@@ -306,35 +306,43 @@ def fetch_prices(tickers):
     results = []
     for symbol in tickers:
         try:
-            ticker = yf.Ticker(symbol)
+            # Use download() — most reliable on Streamlit Cloud
+            hist = yf.download(
+                symbol,
+                period="5d",
+                progress=False,
+                auto_adjust=True,
+            )
 
-            # Try fast_info first, fall back to history
-            try:
-                info = ticker.fast_info
-                current = info.last_price
-                prev = info.previous_close
-            except Exception:
-                hist = ticker.history(period="2d")
-                if hist.empty:
-                    raise ValueError("No price data available")
-                current = float(hist["Close"].iloc[-1])
-                prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current
+            if hist.empty:
+                raise ValueError("No data returned")
 
-            if not current or not prev:
-                raise ValueError("Price data returned None")
+            # Get last two valid closing prices
+            closes = hist["Close"].dropna()
+            if len(closes) < 2:
+                raise ValueError("Not enough data points")
+
+            current = float(closes.iloc[-1])
+            prev    = float(closes.iloc[-2])
+
+            if current == 0 or prev == 0:
+                raise ValueError("Zero price returned")
 
             pct = ((current - prev) / prev) * 100
             results.append({
-                "symbol": symbol,
-                "price": round(current, 2),
+                "symbol":     symbol,
+                "price":      round(current, 2),
                 "prev_close": round(prev, 2),
                 "pct_change": round(pct, 2),
-                "alert": abs(pct) >= ALERT_THRESHOLD,
+                "alert":      abs(pct) >= ALERT_THRESHOLD,
             })
         except Exception as e:
             results.append({
-                "symbol": symbol, "price": None,
-                "pct_change": None, "alert": False, "error": str(e)
+                "symbol":     symbol,
+                "price":      None,
+                "pct_change": None,
+                "alert":      False,
+                "error":      str(e),
             })
     return results
 
